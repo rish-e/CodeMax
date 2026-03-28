@@ -1,0 +1,80 @@
+{
+  "name": "codemax",
+  "version": "1.0.0",
+  "description": "The full-stack MCP that bridges frontend and backend analysis — sees what single-side tools miss.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "codemax": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepare": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "full-stack",
+    "code-analysis",
+    "api-contracts",
+    "frontend",
+    "backend",
+    "typescript",
+    "nextjs",
+    "express",
+    "react",
+    "static-analysis",
+    "developer-tools",
+    "uimax",
+    "backend-max"
+  ],
+  "author": "Rishi Kolisetty",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rish-e/codemax.git"
+  },
+  "homepage": "https://github.com/rish-e/codemax",
+  "bugs": {
+    "url": "https://github.com/rish-e/codemax/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ts-morph": "^27.0.2",
+    "glob": "^11.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "@vitest/coverage-v8": "^3.0.0"
+  },
+  "peerDependencies": {
+    "uimax-mcp": ">=0.7.0",
+    "backend-max": ">=2.1.0"
+  },
+  "peerDependenciesMeta": {
+    "uimax-mcp": {
+      "optional": true
+    },
+    "backend-max": {
+      "optional": true
+    }
+  }
+}
