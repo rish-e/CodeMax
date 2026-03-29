@@ -1,4 +1,4 @@
-import { FullStackAuditReport, ProjectStructure, DependencyMap, IssueTrace, IssueLayer } from '../types.js';
+import { FullStackAuditReport, ProjectStructure, DependencyMap, IssueTrace, IssueLayer, LedgerUpdate } from '../types.js';
 import { detectProject } from '../analyzers/project-detector.js';
 import { scanFrontend, FrontendScanResult } from '../analyzers/frontend-scanner.js';
 import { scanBackend, BackendScanResult } from '../analyzers/backend-scanner.js';
@@ -6,6 +6,8 @@ import { analyzeEnvironment, EnvAnalysis } from '../analyzers/env-analyzer.js';
 import { analyzeContracts } from './contract-analyzer.js';
 import { correlateFindings } from './correlator.js';
 import { calculateHealthScore } from './health-scorer.js';
+import { updateLedger } from '../tools/ledger-manager.js';
+import { generateReport } from '../tools/report-writer.js';
 import { resetIdCounter, pluralize, formatDuration, urlsMatch } from '../utils/helpers.js';
 
 // ─── Full-Stack Audit Orchestrator ───────────────────────────────────────────
@@ -48,7 +50,7 @@ export async function runFullStackAudit(projectPath: string): Promise<FullStackA
   // Phase 7: Generate summary
   const summary = generateSummary(project, frontend, backend, contracts, allIssues, health, duration);
 
-  return {
+  const auditReport: FullStackAuditReport = {
     project,
     timestamp: new Date().toISOString(),
     duration,
@@ -59,6 +61,27 @@ export async function runFullStackAudit(projectPath: string): Promise<FullStackA
     health,
     summary,
   };
+
+  // Phase 8: Update ledger (issue lifecycle tracking) & generate REPORT.md
+  let ledgerUpdate: LedgerUpdate | null = null;
+  try {
+    ledgerUpdate = updateLedger(projectPath, auditReport);
+    generateReport(projectPath, auditReport, ledgerUpdate);
+  } catch {
+    // Non-fatal — ledger/report are supplementary
+  }
+
+  // Enrich summary with ledger delta if available
+  if (ledgerUpdate && (ledgerUpdate.newIssues.length > 0 || ledgerUpdate.fixedIssues.length > 0 || ledgerUpdate.regressions.length > 0)) {
+    const deltaLines: string[] = ['', '## Changes Since Last Scan'];
+    if (ledgerUpdate.newIssues.length > 0) deltaLines.push(`- ${ledgerUpdate.newIssues.length} new issue${ledgerUpdate.newIssues.length > 1 ? 's' : ''}`);
+    if (ledgerUpdate.fixedIssues.length > 0) deltaLines.push(`- ${ledgerUpdate.fixedIssues.length} issue${ledgerUpdate.fixedIssues.length > 1 ? 's' : ''} fixed`);
+    if (ledgerUpdate.regressions.length > 0) deltaLines.push(`- ${ledgerUpdate.regressions.length} regression${ledgerUpdate.regressions.length > 1 ? 's' : ''}`);
+    deltaLines.push(`- Total: ${ledgerUpdate.totalOpen} open, ${ledgerUpdate.totalFixed} fixed`);
+    auditReport.summary += '\n' + deltaLines.join('\n');
+  }
+
+  return auditReport;
 }
 
 // ─── Dependency Mapping ──────────────────────────────────────────────────────

@@ -11,6 +11,14 @@ import { scanFrontend } from './analyzers/frontend-scanner.js';
 import { scanBackend } from './analyzers/backend-scanner.js';
 import { analyzeContracts } from './bridge/contract-analyzer.js';
 import { analyzeEnvironment } from './analyzers/env-analyzer.js';
+import {
+  getLedger,
+  getLedgerEntries,
+  logFix,
+  acknowledgeIssue,
+  getAuditHistory,
+} from './tools/ledger-manager.js';
+import { getReportPath } from './tools/report-writer.js';
 
 // ─── Server Factory ──────────────────────────────────────────────────────────
 
@@ -18,11 +26,11 @@ export function createServer(): McpServer {
   const server = new McpServer(
     {
       name: 'codemax',
-      version: '1.0.0',
+      version: '1.1.0',
     },
     {
       capabilities: { logging: {} },
-      instructions: `CodeMax is a full-stack code analysis MCP that bridges frontend and backend. It detects API contract drift, type mismatches, auth gaps, dead endpoints, phantom calls, and cross-stack performance issues that single-side tools miss. Use \`full_stack_audit\` for comprehensive analysis or \`health_check\` for a quick overview.`,
+      instructions: `CodeMax is a full-stack code analysis MCP that bridges frontend and backend. It detects API contract drift, type mismatches, auth gaps, dead endpoints, phantom calls, and cross-stack performance issues that single-side tools miss. Use \`full_stack_audit\` for comprehensive analysis or \`health_check\` for a quick overview. Every audit persists results to .codemax/ — use \`get_history\` to see trends and \`log_fix\` to document resolutions.`,
     },
   );
 
@@ -463,6 +471,180 @@ function registerTools(server: McpServer): void {
         }
 
         return { content: [{ type: 'text', text: lines.join('\n') }] };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 10. GET HISTORY — audit trail & trend
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    'get_history',
+    'View the full audit history — health score trend over time, issue lifecycle (new, fixed, regressed), and scan statistics. Shows how the codebase has improved or declined across audits.',
+    {
+      projectPath: z.string().describe('Absolute path to the project root directory'),
+      status: z.enum(['open', 'fixed', 'regressed', 'acknowledged', 'all']).default('all').describe('Filter ledger entries by status'),
+    },
+    async ({ projectPath, status }) => {
+      try {
+        const ledger = getLedger(projectPath);
+        const history = getAuditHistory(projectPath);
+
+        const lines: string[] = [];
+        lines.push('# Audit History');
+        lines.push('');
+
+        if (history.length === 0) {
+          lines.push('_No audits recorded yet. Run `full_stack_audit` to start tracking._');
+          return { content: [{ type: 'text', text: lines.join('\n') }] };
+        }
+
+        // Health trend
+        lines.push('## Health Trend');
+        lines.push('');
+        lines.push('| Date | Grade | Score | Issues | Phantom | Dead |');
+        lines.push('|------|-------|-------|--------|---------|------|');
+        for (const snap of history.slice(-15)) {
+          lines.push(`| ${snap.timestamp.split('T')[0]} | ${snap.healthGrade} | ${snap.healthScore}/100 | ${snap.totalIssues} | ${snap.phantomCalls} | ${snap.deadEndpoints} |`);
+        }
+        lines.push('');
+
+        // Ledger entries
+        const entries = status === 'all'
+          ? ledger.entries
+          : getLedgerEntries(projectPath, { status: status as any });
+
+        lines.push(`## Issue Ledger (${entries.length} entries${status !== 'all' ? `, filtered: ${status}` : ''})`);
+        lines.push('');
+
+        if (entries.length === 0) {
+          lines.push('_No entries match the filter._');
+        } else {
+          lines.push('| ID | Status | Severity | Title | First Seen | Last Seen | Occurrences |');
+          lines.push('|----|--------|----------|-------|------------|-----------|-------------|');
+          for (const entry of entries.slice(0, 50)) {
+            const statusLabel = entry.status === 'regressed' ? '**REGRESSED**' : entry.status;
+            lines.push(
+              `| \`${entry.id}\` | ${statusLabel} | ${entry.severity} | ${entry.title} | ${entry.firstSeen.split('T')[0]} | ${entry.lastSeen.split('T')[0]} | ${entry.occurrences} |`,
+            );
+          }
+          if (entries.length > 50) {
+            lines.push(`| ... | | | _${entries.length - 50} more_ | | | |`);
+          }
+        }
+
+        // Summary stats
+        const open = ledger.entries.filter((e) => e.status === 'open').length;
+        const fixed = ledger.entries.filter((e) => e.status === 'fixed').length;
+        const regressed = ledger.entries.filter((e) => e.status === 'regressed').length;
+        lines.push('');
+        lines.push(`> **Totals**: ${open} open, ${fixed} fixed, ${regressed} regressed, ${ledger.entries.length} lifetime`);
+        lines.push(`> **Report**: \`.codemax/REPORT.md\``);
+
+        return { content: [{ type: 'text', text: lines.join('\n') }] };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 11. LOG FIX — document how an issue was resolved
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    'log_fix',
+    'Manually log how a specific issue was fixed. The fix description is recorded in the ledger and appears in REPORT.md. Use the issue ID from `get_history` or `full_stack_audit`.',
+    {
+      projectPath: z.string().describe('Absolute path to the project root directory'),
+      issueId: z.string().describe('Issue ID from the ledger (e.g., CTR-X-a1b2c3)'),
+      description: z.string().describe('How the issue was fixed — what changed and why'),
+    },
+    async ({ projectPath, issueId, description }) => {
+      try {
+        const result = logFix(projectPath, issueId, description);
+
+        if (!result.success) {
+          return { content: [{ type: 'text', text: result.message }], isError: true };
+        }
+
+        const entry = result.entry!;
+        const lines: string[] = [];
+        lines.push(`# Fix Logged`);
+        lines.push('');
+        lines.push(`**Issue**: \`${entry.id}\` ${entry.title}`);
+        lines.push(`**Status**: fixed`);
+        lines.push(`**How**: ${description}`);
+        lines.push(`**Fixed at**: ${entry.fixedAt}`);
+        lines.push('');
+        lines.push(`This fix is now recorded in \`.codemax/ledger.json\` and will appear in \`.codemax/REPORT.md\` on next audit.`);
+
+        return { content: [{ type: 'text', text: lines.join('\n') }] };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 12. ACKNOWLEDGE ISSUE — mark a known issue as intentional
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    'acknowledge_issue',
+    'Mark an issue as acknowledged — you know about it and it\'s intentional or acceptable. Acknowledged issues still appear in reports but won\'t be flagged as action items.',
+    {
+      projectPath: z.string().describe('Absolute path to the project root directory'),
+      issueId: z.string().describe('Issue ID from the ledger'),
+    },
+    async ({ projectPath, issueId }) => {
+      try {
+        const result = acknowledgeIssue(projectPath, issueId);
+        return { content: [{ type: 'text', text: result.message }] };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 13. GET REPORT — read the generated REPORT.md
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    'get_report',
+    'Read the latest generated REPORT.md — the living documentation of all discovered issues, fixes, health trends, and API contract maps. Located at .codemax/REPORT.md.',
+    {
+      projectPath: z.string().describe('Absolute path to the project root directory'),
+    },
+    async ({ projectPath }) => {
+      try {
+        const reportPath = getReportPath(projectPath);
+        const fs = await import('node:fs');
+
+        if (!fs.existsSync(reportPath)) {
+          return {
+            content: [{ type: 'text', text: 'No report generated yet. Run `full_stack_audit` first to generate `.codemax/REPORT.md`.' }],
+          };
+        }
+
+        const content = fs.readFileSync(reportPath, 'utf-8');
+        return { content: [{ type: 'text', text: content }] };
       } catch (error) {
         return {
           content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],

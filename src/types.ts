@@ -199,6 +199,68 @@ export interface DependencyMap {
   phantomCalls: FrontendApiCall[];
 }
 
+// ─── Ledger (Issue Lifecycle Tracking) ───────────────────────────────────────
+
+export type IssueStatus = 'open' | 'fixed' | 'regressed' | 'acknowledged';
+
+export interface LedgerEntry {
+  id: string;
+  fingerprint: string;
+  category: IssueCategory;
+  severity: Severity;
+  layer: IssueLayer;
+  title: string;
+  description: string;
+  suggestion: string;
+  evidence: Array<{
+    file: string;
+    line: number;
+    snippet: string;
+    side: 'frontend' | 'backend';
+  }>;
+  status: IssueStatus;
+  firstSeen: string;
+  lastSeen: string;
+  fixedAt: string | null;
+  fixDescription: string | null;
+  occurrences: number;
+  hasRegressed: boolean;
+}
+
+export interface LedgerUpdate {
+  newIssues: LedgerEntry[];
+  fixedIssues: LedgerEntry[];
+  regressions: LedgerEntry[];
+  acknowledged: LedgerEntry[];
+  totalOpen: number;
+  totalFixed: number;
+  totalRegressed: number;
+}
+
+export interface AuditSnapshot {
+  timestamp: string;
+  duration: number;
+  healthGrade: string;
+  healthScore: number;
+  dimensions: Record<string, { score: number; maxScore: number }>;
+  totalIssues: number;
+  issuesBySeverity: Record<Severity, number>;
+  issuesByCategory: Record<string, number>;
+  frontendCalls: number;
+  backendRoutes: number;
+  matchedContracts: number;
+  phantomCalls: number;
+  deadEndpoints: number;
+}
+
+export interface Ledger {
+  projectPath: string;
+  createdAt: string;
+  lastUpdated: string;
+  entries: LedgerEntry[];
+  history: AuditSnapshot[];
+}
+
 // ─── Issue Trace ─────────────────────────────────────────────────────────────
 
 export interface IssueTrace {

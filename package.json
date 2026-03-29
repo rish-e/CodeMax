@@ -1,6 +1,6 @@
 {
   "name": "codemax",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The full-stack MCP that bridges frontend and backend analysis — sees what single-side tools miss.",
   "type": "module",
   "main": "dist/index.js",

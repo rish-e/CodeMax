@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.1.0] - 2026-03-29
+
+### Added
+- **Issue lifecycle ledger** — persistent tracking of every issue across scans with deterministic fingerprinting. Issues transition through `open → fixed → regressed` automatically.
+- **Living REPORT.md** — auto-generated Markdown report at `.codemax/REPORT.md` with health dashboard, trend graphs, open issues with evidence, fix log, regression history, and API contract map. Readable by any developer without running CodeMax.
+- **Health trend tracking** — audit snapshots stored over time, showing health score progression across up to 50 scans.
+- **Regression detection** — previously fixed issues that reappear are automatically flagged as regressions with full history.
+- **Fix logging** — `log_fix` tool to document *how* an issue was resolved, recorded in the ledger and REPORT.md.
+- **Issue acknowledgment** — `acknowledge_issue` tool to mark intentional/acceptable issues so they don't clutter action items.
+
+### New Tools (4)
+- `get_history` — audit trail with health trend, issue lifecycle, and scan statistics
+- `log_fix` — manually document how an issue was resolved
+- `acknowledge_issue` — mark issues as intentional/acceptable
+- `get_report` — read the generated `.codemax/REPORT.md`
+
+### Changed
+- `full_stack_audit` now automatically persists results to `.codemax/ledger.json` and generates `.codemax/REPORT.md`
+- Audit summary now includes a "Changes Since Last Scan" section showing new issues, fixes, and regressions
+- Auto-adds `.codemax/` to project `.gitignore`
+
+---
+
 ## [1.0.0] - 2026-03-28
 
 ### Added

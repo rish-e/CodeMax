@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org)
-[![Tools](https://img.shields.io/badge/MCP_Tools-9-purple)]()
+[![Tools](https://img.shields.io/badge/MCP_Tools-13-purple)]()
 
 ---
 
@@ -122,6 +122,15 @@ CodeMax detects cross-stack issues that frontend-only or backend-only tools stru
 | `map_dependencies` | Map all connections between frontend files and backend routes. Find orphans and phantoms. |
 | `check_env` | Cross-reference .env files against actual usage in frontend and backend code. |
 
+### Documentation & History
+
+| Tool | Description |
+|------|-------------|
+| `get_history` | Audit trail — health trend over time, issue lifecycle (new, fixed, regressed), scan statistics. Filter by status. |
+| `log_fix` | Document how a specific issue was resolved. Recorded in the ledger and appears in REPORT.md. |
+| `acknowledge_issue` | Mark an issue as intentional/acceptable. Won't be flagged as action items in future reports. |
+| `get_report` | Read the living REPORT.md — all issues, fixes, trends, and contract maps in one document. |
+
 ### Individual Scans
 
 | Tool | Description |
@@ -190,6 +199,61 @@ Data Flow        [███████░░░] 70/100  — 2 field mismatches
 Environment      [█████████░] 95/100  — 1 missing env var
 
 Overall: B (78/100)
+```
+
+---
+
+## Project Documentation (`.codemax/`)
+
+Every audit automatically persists results to a `.codemax/` directory in your project. This gives your team a living audit trail without needing to run CodeMax themselves.
+
+```
+.codemax/
+├── ledger.json     # Issue lifecycle tracking (all issues, ever)
+└── REPORT.md       # Human-readable living document
+```
+
+### REPORT.md
+
+A Markdown file any developer can read — no tools needed. Updated on every `full_stack_audit`:
+
+- **Health Dashboard** — current scores across all 6 dimensions
+- **Health Trend** — score over time, so you can see if things are improving
+- **Latest Scan Changes** — what's new, what's fixed, what regressed
+- **Open Issues** — every issue with evidence, code snippets, and fix suggestions
+- **Fix Log** — table of everything that was resolved, when, and how
+- **Regression History** — issues that were fixed but came back
+- **API Contract Map** — full frontend-to-backend connection table
+- **Project Structure** — detected frameworks, ORM, paths
+
+### Issue Lifecycle
+
+Issues are tracked through their lifecycle across scans:
+
+```
+Discovered ──► open ──► fixed (disappears from next scan)
+                │                    │
+                ▼                    ▼
+          acknowledged          regressed (comes back)
+         (intentional)               │
+                                     ▼
+                                   fixed (again)
+```
+
+- **Auto-detection**: Issues are automatically marked `fixed` when they disappear from a scan
+- **Manual logging**: Use `log_fix` to document *how* something was resolved
+- **Regression tracking**: If a fixed issue reappears, it's flagged as `regressed`
+- **Deterministic fingerprints**: Same issue = same fingerprint, even if line numbers shift
+
+### Example Workflow
+
+```
+1. Run `full_stack_audit` → finds 8 issues, creates .codemax/REPORT.md
+2. Fix 3 issues in your code
+3. Run `full_stack_audit` again → auto-detects 3 fixes, finds 1 new issue
+4. Use `log_fix CTR-X-a1b2c3 "Added Zod validation to POST /api/users"` → records the how
+5. Use `acknowledge_issue DEP-B-d4e5f6` → dead endpoint is intentional (consumed by mobile app)
+6. Open .codemax/REPORT.md → full audit trail, readable by anyone
 ```
 
 ---
@@ -324,7 +388,7 @@ npm test
 ```
 src/
 ├── index.ts                    # Entry point (stdio transport)
-├── server.ts                   # MCP server + 9 tool registrations
+├── server.ts                   # MCP server + 13 tool registrations
 ├── types.ts                    # Shared type definitions
 ├── analyzers/
 │   ├── project-detector.ts     # Framework, monorepo, ORM detection
@@ -332,17 +396,21 @@ src/
 │   ├── backend-scanner.ts      # Route extraction (Next.js, Express, etc.)
 │   └── env-analyzer.ts         # Environment variable cross-referencing
 ├── bridge/
-│   ├── orchestrator.ts         # Full audit coordination
+│   ├── orchestrator.ts         # Full audit coordination + ledger integration
 │   ├── contract-analyzer.ts    # Frontend ↔ backend contract comparison
 │   ├── correlator.ts           # Cross-stack issue detection
 │   └── health-scorer.ts        # 6-dimension health scoring
+├── tools/
+│   ├── ledger-manager.ts       # Issue lifecycle tracking (fingerprint, fix, regress)
+│   └── report-writer.ts        # Living REPORT.md generation
 ├── utils/
 │   └── helpers.ts              # URL normalization, scoring, formatting
 └── __tests__/
     ├── helpers.test.ts          # Unit tests for utilities
     ├── project-detector.test.ts # Project detection tests
     ├── contract-analyzer.test.ts# Contract analysis tests
-    └── scanners.test.ts         # Frontend + backend scanner tests
+    ├── scanners.test.ts         # Frontend + backend scanner tests
+    └── ledger.test.ts           # Ledger lifecycle tests
 ```
 
 ---
@@ -371,6 +439,11 @@ Contributions welcome. [Open an issue](https://github.com/rish-e/codemax/issues)
 - [x] Server Actions support
 - [x] Environment variable cross-referencing
 - [x] Health scoring (6 dimensions)
+- [x] Issue lifecycle ledger (open → fixed → regressed)
+- [x] Living REPORT.md documentation
+- [x] Fix logging with descriptions
+- [x] Health trend tracking across audits
+- [x] Regression detection
 - [ ] GraphQL schema ↔ query contract analysis
 - [ ] tRPC router ↔ client contract analysis
 - [ ] Auto-fix engine (generate patches for common issues)
