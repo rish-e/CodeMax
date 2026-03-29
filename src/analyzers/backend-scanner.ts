@@ -14,7 +14,7 @@ export interface BackendScanResult {
   scannedFiles: number;
 }
 
-export function scanBackend(project: ProjectStructure): BackendScanResult {
+export function scanBackend(project: ProjectStructure, fileFilter?: Set<string>): BackendScanResult {
   const routes: BackendRoute[] = [];
   const envRefs: BackendEnvRef[] = [];
 
@@ -24,7 +24,7 @@ export function scanBackend(project: ProjectStructure): BackendScanResult {
 
   const allFiles: string[] = [];
   for (const searchPath of searchPaths) {
-    allFiles.push(...collectFiles(searchPath));
+    allFiles.push(...collectFiles(searchPath, undefined, undefined, undefined, fileFilter));
   }
 
   const uniqueFiles = [...new Set(allFiles)];

@@ -1,18 +1,34 @@
 {
-  "name": "codemax",
-  "version": "1.1.0",
+  "name": "codemax-mcp",
+  "version": "1.2.0",
   "description": "The full-stack MCP that bridges frontend and backend analysis — sees what single-side tools miss.",
   "type": "module",
   "main": "dist/index.js",
-  "bin": {
-    "codemax": "dist/index.js"
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
   },
+  "bin": {
+    "codemax-mcp": "dist/index.js"
+  },
+  "mcpName": "io.github.rish-e/codemax",
   "files": [
     "dist",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "server.json"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

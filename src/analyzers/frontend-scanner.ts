@@ -14,7 +14,7 @@ export interface FrontendScanResult {
   scannedFiles: number;
 }
 
-export function scanFrontend(project: ProjectStructure): FrontendScanResult {
+export function scanFrontend(project: ProjectStructure, fileFilter?: Set<string>): FrontendScanResult {
   const apiCalls: FrontendApiCall[] = [];
   const envRefs: FrontendEnvRef[] = [];
 
@@ -24,7 +24,7 @@ export function scanFrontend(project: ProjectStructure): FrontendScanResult {
 
   const allFiles: string[] = [];
   for (const searchPath of searchPaths) {
-    allFiles.push(...collectFiles(searchPath));
+    allFiles.push(...collectFiles(searchPath, undefined, undefined, undefined, fileFilter));
   }
 
   // Deduplicate

@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.2.0] - 2026-03-29
+
+### Added
+- **CLI mode** — run CodeMax from the terminal or CI/CD without an MCP client. `codemax-mcp audit <path> [options]`
+- **SARIF output** — `--format sarif` produces SARIF 2.1.0 output compatible with GitHub Code Scanning, VS Code, and other tools.
+- **Git diff-aware scanning** — `--diff` flag limits scanning to files changed in git (staged + unstaged), dramatically faster on large codebases.
+- **CI mode** — `--ci` flag exits with code 1 if health score falls below threshold (default 70, configurable via `--threshold`).
+- **GitHub Actions ready** — pipe SARIF output to `github/codeql-action/upload-sarif` for PR-level code scanning.
+
+### New Files
+- `server.json` — Official MCP Registry metadata for discoverability
+- `smithery.yaml` — Smithery marketplace configuration
+- `glama.json` — Glama directory listing
+- `CONTRIBUTING.md` — Development setup, guidelines, and architecture principles
+- `SECURITY.md` — Security policy, scope, and vulnerability reporting
+- `CODE_OF_CONDUCT.md` — Contributor Covenant
+- `.github/ISSUE_TEMPLATE/bug_report.yml` — Structured bug report form
+- `.github/ISSUE_TEMPLATE/feature_request.yml` — Feature request form
+- `.github/pull_request_template.md` — PR template
+- `.github/dependabot.yml` — Automated dependency updates
+- `.editorconfig` — Consistent editor formatting
+- `.gitattributes` — Line ending normalization
+
+### Changed
+- **Renamed npm package** from `codemax` to `codemax-mcp` (the name `codemax` was already taken on npm by another package)
+- **Entry point** now dispatches between MCP server mode (default) and CLI mode (when arguments are passed)
+- **Version** is now read dynamically from `package.json` — single source of truth
+- **Top-level error handler** — fatal errors are caught and reported to stderr instead of crashing silently
+- Added `types` and `exports` fields to `package.json` for TypeScript consumers
+- Added `mcpName` field for Official MCP Registry
+- Added `publishConfig` for clean npm publishing
+- `collectFiles`, `scanFrontend`, `scanBackend`, and `runFullStackAudit` now accept an optional file filter for diff-aware scanning
+
+---
+
 ## [1.1.0] - 2026-03-29
 
 ### Added
@@ -35,12 +70,6 @@
 - **Project detector** — auto-detects frameworks, monorepos, ORMs, and layer boundaries
 - **Frontend scanner** — finds fetch, axios, SWR, React Query, and server action calls
 - **Backend scanner** — finds Next.js (App + Pages router), Express, and server action handlers
-
-### Supported Frameworks
-- **Frontend**: Next.js (App Router, Pages Router), React, Vue, Svelte, Angular
-- **Backend**: Next.js API Routes, Next.js Server Actions, Express, Fastify, tRPC, GraphQL
-- **ORM**: Prisma, Drizzle, TypeORM, Sequelize
-- **Package Managers**: npm, yarn, pnpm, bun
 
 ### Tools (9)
 - `full_stack_audit` — comprehensive analysis with health score

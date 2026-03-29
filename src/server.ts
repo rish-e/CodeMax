@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
@@ -20,13 +21,19 @@ import {
 } from './tools/ledger-manager.js';
 import { getReportPath } from './tools/report-writer.js';
 
+// Read version from package.json at runtime — single source of truth
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json') as { version: string };
+
+export { VERSION };
+
 // ─── Server Factory ──────────────────────────────────────────────────────────
 
 export function createServer(): McpServer {
   const server = new McpServer(
     {
       name: 'codemax',
-      version: '1.1.0',
+      version: VERSION,
     },
     {
       capabilities: { logging: {} },

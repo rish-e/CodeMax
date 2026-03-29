@@ -21,6 +21,7 @@ export function collectFiles(
   extensions: Set<string> = CODE_EXTENSIONS,
   maxFiles: number = 5000,
   maxDepth: number = 15,
+  fileFilter?: Set<string>,
 ): string[] {
   const files: string[] = [];
 
@@ -51,6 +52,11 @@ export function collectFiles(
   }
 
   walk(dir, 0);
+
+  if (fileFilter) {
+    return files.filter((f) => fileFilter.has(path.resolve(f)));
+  }
+
   return files;
 }
 

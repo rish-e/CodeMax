@@ -1,0 +1,92 @@
+name: Bug Report
+description: Report a bug in CodeMax
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Run `codemax-mcp audit /path/to/project`
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP Client
+      description: Which MCP client are you using?
+      options:
+        - Claude Code
+        - Cursor
+        - VS Code (Copilot)
+        - Windsurf
+        - Cline
+        - CLI mode (codemax-mcp audit)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: CodeMax Version
+      description: Run `npx codemax-mcp --version`
+      placeholder: "1.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js Version
+      description: Run `node --version`
+      placeholder: "v22.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Paste any error messages or logs
+      render: shell

@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import { FullStackAuditReport, ProjectStructure, DependencyMap, IssueTrace, IssueLayer, LedgerUpdate } from '../types.js';
 import { detectProject } from '../analyzers/project-detector.js';
 import { scanFrontend, FrontendScanResult } from '../analyzers/frontend-scanner.js';
@@ -10,19 +11,30 @@ import { updateLedger } from '../tools/ledger-manager.js';
 import { generateReport } from '../tools/report-writer.js';
 import { resetIdCounter, pluralize, formatDuration, urlsMatch } from '../utils/helpers.js';
 
+// ─── Audit Options ──────────────────────────────────────────────────────────
+
+export interface AuditOptions {
+  changedFiles?: string[];
+}
+
 // ─── Full-Stack Audit Orchestrator ───────────────────────────────────────────
 // Coordinates all analysis engines and produces a unified report.
 
-export async function runFullStackAudit(projectPath: string): Promise<FullStackAuditReport> {
+export async function runFullStackAudit(projectPath: string, options?: AuditOptions): Promise<FullStackAuditReport> {
   const start = Date.now();
   resetIdCounter();
 
   // Phase 1: Detect project structure
   const project = detectProject(projectPath);
 
+  // Build file filter from changed files if provided
+  const fileFilter = options?.changedFiles
+    ? new Set(options.changedFiles.map((f) => path.resolve(projectPath, f)))
+    : undefined;
+
   // Phase 2: Scan both sides
-  const frontend = scanFrontend(project);
-  const backend = scanBackend(project);
+  const frontend = scanFrontend(project, fileFilter);
+  const backend = scanBackend(project, fileFilter);
 
   // Phase 3: Analyze environment
   const envAnalysis = analyzeEnvironment(project, frontend, backend);

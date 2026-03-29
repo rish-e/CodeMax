@@ -2,11 +2,13 @@
 
 **The full-stack MCP that sees what single-side tools miss.**
 
-[![npm](https://img.shields.io/npm/v/codemax)](https://www.npmjs.com/package/codemax)
+[![npm](https://img.shields.io/npm/v/codemax-mcp)](https://www.npmjs.com/package/codemax-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org)
 [![Tools](https://img.shields.io/badge/MCP_Tools-13-purple)]()
+
+<a href="https://smithery.ai/server/@rish-e/codemax"><img src="https://smithery.ai/badge/@rish-e/codemax" alt="Smithery" /></a>
 
 ---
 
@@ -15,50 +17,102 @@ CodeMax bridges the gap between frontend and backend analysis. It scans both sid
 Built to work alongside [UIMax](https://github.com/prembobby39-gif/uimax-mcp) (frontend analysis) and [BackendMax](https://github.com/rish-e/backend-max) (backend analysis) — or completely standalone.
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  MCP Client                     │
-│          (Claude Code, Cursor, etc.)            │
-└────────────┬──────────┬──────────┬──────────────┘
-             │          │          │
-        MCP Protocol    │     MCP Protocol
-             │          │          │
-     ┌───────▼──┐  ┌────▼─────┐  ┌▼──────────┐
-     │  UIMax   │  │ CodeMax  │  │BackendMax │
-     │(frontend)│  │(bridge)  │  │ (backend) │
-     └──────────┘  └──┬───┬──┘  └───────────┘
-                      │   │
-              imports  │   │  imports
-              core/    │   │  core/
-                      ▼   ▼
-            ┌──────────────────────┐
-            │  Cross-Stack Engine  │
-            │  - Contract analysis │
-            │  - Issue correlation │
-            │  - Health scoring    │
-            │  - Dependency mapping│
-            └──────────────────────┘
+                    MCP Client
+           (Claude Code, Cursor, etc.)
+          ┌──────────┼──────────┐
+          │          │          │
+     ┌────▼───┐ ┌───▼────┐ ┌──▼────────┐
+     │ UIMax  │ │CodeMax │ │BackendMax │
+     │  (FE)  │ │(bridge)│ │   (BE)    │
+     └────────┘ └───┬────┘ └───────────┘
+                    │
+            ┌───────▼───────┐
+            │  Cross-Stack  │
+            │    Engine     │
+            └───────────────┘
 ```
 
 ---
 
-## Quick Start
+## Install
 
 ### Claude Code
 
 ```bash
-claude mcp add codemax -- npx -y codemax
+claude mcp add codemax -- npx -y codemax-mcp
 ```
 
-### Manual Configuration
+### Cursor
 
-Add to your MCP settings:
+Add to your MCP settings (`~/.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "codemax": {
       "command": "npx",
-      "args": ["-y", "codemax"]
+      "args": ["-y", "codemax-mcp"]
+    }
+  }
+}
+```
+
+### VS Code (Copilot)
+
+Add to your user or workspace settings (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "codemax": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "codemax-mcp"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to `~/.windsurf/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "codemax": {
+      "command": "npx",
+      "args": ["-y", "codemax-mcp"]
+    }
+  }
+}
+```
+
+### Cline
+
+Add to Cline MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "codemax": {
+      "command": "npx",
+      "args": ["-y", "codemax-mcp"]
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "codemax": {
+      "command": "npx",
+      "args": ["-y", "codemax-mcp"]
     }
   }
 }
@@ -81,6 +135,55 @@ npm install && npm run build
     }
   }
 }
+```
+
+---
+
+## CLI Mode
+
+CodeMax also works as a standalone CLI for CI/CD pipelines and terminal use:
+
+```bash
+# Full audit with markdown output
+npx codemax-mcp audit .
+
+# JSON output (pipe to jq, etc.)
+npx codemax-mcp audit . --format json
+
+# SARIF output (GitHub Code Scanning)
+npx codemax-mcp audit . --format sarif > results.sarif
+
+# CI mode — exit code 1 if health score below threshold
+npx codemax-mcp audit . --ci --threshold 75
+
+# Only scan files changed in git
+npx codemax-mcp audit . --diff
+
+# Combine everything
+npx codemax-mcp audit . --diff --ci --format sarif
+```
+
+### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--format, -f` | Output format: `markdown` (default), `json`, `sarif` |
+| `--ci` | CI mode — exit code 1 if health below threshold |
+| `--threshold, -t` | Health score threshold for `--ci` (default: 70) |
+| `--diff` | Only scan files changed in git (staged + unstaged) |
+| `--version` | Print version |
+| `--help` | Print help |
+
+### GitHub Actions
+
+```yaml
+- name: Run CodeMax
+  run: npx codemax-mcp audit . --ci --format sarif > codemax.sarif
+
+- name: Upload SARIF
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: codemax.sarif
 ```
 
 ---
@@ -126,18 +229,18 @@ CodeMax detects cross-stack issues that frontend-only or backend-only tools stru
 
 | Tool | Description |
 |------|-------------|
-| `get_history` | Audit trail — health trend over time, issue lifecycle (new, fixed, regressed), scan statistics. Filter by status. |
+| `get_history` | Audit trail — health trend over time, issue lifecycle (new, fixed, regressed), scan statistics. |
 | `log_fix` | Document how a specific issue was resolved. Recorded in the ledger and appears in REPORT.md. |
-| `acknowledge_issue` | Mark an issue as intentional/acceptable. Won't be flagged as action items in future reports. |
+| `acknowledge_issue` | Mark an issue as intentional/acceptable. Won't be flagged in future reports. |
 | `get_report` | Read the living REPORT.md — all issues, fixes, trends, and contract maps in one document. |
 
 ### Individual Scans
 
 | Tool | Description |
 |------|-------------|
-| `scan_frontend` | All frontend API calls — fetch, axios, SWR, React Query, server actions. Error handling & auth status per call. |
-| `scan_backend` | All backend routes — Next.js, Express, server actions. Auth, validation, and error handling status per route. |
-| `detect_project` | Project structure report — frameworks, monorepo, ORM, paths, package manager, env files. |
+| `scan_frontend` | All frontend API calls — fetch, axios, SWR, React Query, server actions. |
+| `scan_backend` | All backend routes — Next.js, Express, server actions. Auth, validation, and error handling. |
+| `detect_project` | Project structure — frameworks, monorepo, ORM, paths, package manager. |
 
 ---
 
@@ -180,10 +283,10 @@ The bridge engine cross-references both sides:
 ```
 Frontend Calls          Backend Routes
 ──────────────          ──────────────
-GET /api/users    ───►  GET /api/users       ✓ matched
-POST /api/posts   ───►  (nothing)            ✗ phantom call!
-(nothing)         ◄───  GET /api/admin       ✗ dead endpoint
-POST /api/auth    ───►  GET /api/auth        ✗ method mismatch!
+GET /api/users    ───►  GET /api/users       matched
+POST /api/posts   ───►  (nothing)            phantom call
+(nothing)         ◄───  GET /api/admin       dead endpoint
+POST /api/auth    ───►  GET /api/auth        method mismatch
 ```
 
 ### 4. Health Scoring
@@ -341,7 +444,7 @@ CodeMax is part of a three-MCP ecosystem:
 |-----|-------|-------|
 | [**UIMax**](https://github.com/prembobby39-gif/uimax-mcp) | Frontend — screenshots, accessibility, Lighthouse, code analysis | 34 tools |
 | [**BackendMax**](https://github.com/rish-e/backend-max) | Backend — route scanning, security audit, Prisma, error handling | 20 tools |
-| **CodeMax** | Cross-stack — contract verification, issue tracing, health scoring | 9 tools |
+| **CodeMax** | Cross-stack — contract verification, issue tracing, health scoring | 13 tools |
 
 Use any combination:
 - **UIMax alone** — pure frontend analysis
@@ -387,7 +490,8 @@ npm test
 
 ```
 src/
-├── index.ts                    # Entry point (stdio transport)
+├── index.ts                    # Entry point (MCP server + CLI dispatcher)
+├── cli.ts                      # CLI mode (audit, --format, --diff, --ci)
 ├── server.ts                   # MCP server + 13 tool registrations
 ├── types.ts                    # Shared type definitions
 ├── analyzers/
@@ -400,17 +504,19 @@ src/
 │   ├── contract-analyzer.ts    # Frontend ↔ backend contract comparison
 │   ├── correlator.ts           # Cross-stack issue detection
 │   └── health-scorer.ts        # 6-dimension health scoring
+├── formatters/
+│   └── sarif.ts                # SARIF 2.1.0 output (GitHub Code Scanning)
 ├── tools/
 │   ├── ledger-manager.ts       # Issue lifecycle tracking (fingerprint, fix, regress)
 │   └── report-writer.ts        # Living REPORT.md generation
 ├── utils/
 │   └── helpers.ts              # URL normalization, scoring, formatting
 └── __tests__/
-    ├── helpers.test.ts          # Unit tests for utilities
-    ├── project-detector.test.ts # Project detection tests
-    ├── contract-analyzer.test.ts# Contract analysis tests
-    ├── scanners.test.ts         # Frontend + backend scanner tests
-    └── ledger.test.ts           # Ledger lifecycle tests
+    ├── helpers.test.ts
+    ├── project-detector.test.ts
+    ├── contract-analyzer.test.ts
+    ├── scanners.test.ts
+    └── ledger.test.ts
 ```
 
 ---
@@ -421,7 +527,7 @@ CodeMax is read-only static analysis:
 
 - **Never executes code** — pure AST parsing and regex matching
 - **Never reads .env values** — only checks variable names exist
-- **Never modifies files** — zero writes to your codebase
+- **Never modifies files** — zero writes to your codebase (only to `.codemax/`)
 - **Never sends data externally** — everything stays local
 - **Caps scan scope** — 5,000 files max, 1MB per file, 15 directory levels
 
@@ -429,9 +535,11 @@ CodeMax is read-only static analysis:
 
 ## Contributing
 
-Contributions welcome. [Open an issue](https://github.com/rish-e/codemax/issues) or submit a PR.
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, guidelines, and architecture principles.
 
-### Roadmap
+---
+
+## Roadmap
 
 - [x] Core contract analysis engine
 - [x] Next.js (App + Pages router) support
@@ -444,6 +552,9 @@ Contributions welcome. [Open an issue](https://github.com/rish-e/codemax/issues)
 - [x] Fix logging with descriptions
 - [x] Health trend tracking across audits
 - [x] Regression detection
+- [x] CLI mode with `--ci` and `--diff`
+- [x] SARIF output for GitHub Code Scanning
+- [x] Git diff-aware incremental scanning
 - [ ] GraphQL schema ↔ query contract analysis
 - [ ] tRPC router ↔ client contract analysis
 - [ ] Auto-fix engine (generate patches for common issues)
@@ -451,7 +562,8 @@ Contributions welcome. [Open an issue](https://github.com/rish-e/codemax/issues)
 - [ ] HTML report generation
 - [ ] Prisma schema ↔ API response field validation
 - [ ] CORS configuration verification
-- [ ] Deep integration with UIMax + BackendMax core APIs
+- [ ] OpenAPI spec integration
+- [ ] Streamable HTTP transport
 
 ---
 
